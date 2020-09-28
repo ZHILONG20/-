@@ -1,0 +1,68 @@
+USE [Design and practice]
+GO
+CREATE TABLE Borrow
+(
+	Bid char(40),
+	Rid char(40),
+	Bs Date,
+	Be Date,
+	Return_ bit,--代表是否归还
+	penalty_for_delay INT,--罚金
+	PRIMARY KEY (Bid,Rid),
+	FOREIGN KEY (Bid) REFERENCES BOOK (Bid),
+	FOREIGN KEY (Rid) REFERENCES Reader (Rid),
+)
+USE [Design and practice]
+GO
+INSERT
+INTO BOOK
+VALUES('05','红楼梦','literature','15','5')
+
+
+--创建触发器，如果有人借书Borrow表那么我就让book表减一，还书+1
+USE  [Design and practice]
+GO
+CREATE TRIGGER tri_return_ 
+ON Borrow
+FOR delete
+AS
+declare @id char(40)
+declare @return bit
+SELECT @id=Bid,@return=Return_ from inserted  
+UPDATE BOOK SET BOOK.numbers=BOOK.numbers-1 WHERE BOOK.Bid=@id and @return=1
+--如果return ==1代表借书，如果return==0代表还书。
+
+--创建触发器，读者借书，借书数量自动+1；归还后借书数量-1；
+USE  [Design and practice]
+GO
+CREATE TRIGGER tri_readerreturn_ 
+ON Borrow
+FOR insert
+AS
+declare @rid char(40)
+declare @return bit
+SELECT @rid=Rid,@return=Return_ from inserted  
+UPDATE Reader SET Reader.Borrownum=Reader.Borrownum-1 WHERE Reader.Rid=@rid and @return=0;
+
+
+--插入读者数据
+USE  [Design and practice]
+GO
+INSERT 
+INTO Reader
+VALUES('R1',0,'MA'),('R2',0,'WANG'),('R3',0,'LIU'),('R4',0,'SB'),('R5',0,'DIU')
+
+--添加角色
+USE  [Design and practice]
+GO
+EXEC sp_addrole 'newrole2'
+
+--给角色赋予权限
+USE  [Design and practice]
+GO
+GRANT SELECT,INSERT,DELETE,UPDATE ON BOrrow TO newrole1,newrole2
+
+--实现罚款功能
+USE  [Design and practice]
+GO
+UPDATE Borrow SET penalty_for_delay=15 WHERE Return_=1 AND  DATEDIFF ( day,Bs,Be)>30
